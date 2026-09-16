@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Plot — Points, Lines &amp; Radius</title>
+<style>
+  :root{
+    --paper:#F6F4EE;
+    --paper-dim:#EFEBE1;
+    --ink:#1B2A41;
+    --ink-soft:#5B6675;
+    --rule:#D8D2C2;
+    --teal:#2C6E63;
+    --teal-dim:#E4EEEB;
+    --rust:#B5482A;
+    --rust-dim:#F5E5DE;
+    --amber:#A9791F;
+    --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--paper);
+    display:flex;
+    min-height:100vh;
+    overflow:hidden;
+  }
+
+  /* ---------- Sidebar ---------- */
+  #sidebar{
+    width:380px;
+    min-width:380px;
+    background:var(--paper);
+    border-right:1px solid var(--rule);
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow-y:auto;
+  }
+  #sidebar::-webkit-scrollbar{width:8px;}
+  #sidebar::-webkit-scrollbar-thumb{background:var(--rule);border-radius:4px;}
+
+  .brand{
+    padding:22px 22px 16px;
+    border-bottom:1px solid var(--rule);
+  }
+  .brand h1{
+    margin:0 0 4px;
+    font-size:19px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .brand p{
+    margin:0;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.5;
+  }
+
+  .section{
+    padding:18px 22px;
+    border-bottom:1px solid var(--rule);
+  }
+  .section-label{
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--teal);
+    font-weight:700;
+    margin:0 0 12px;
+  }
+
+  .field{
+    margin-bottom:10px;
+  }
+  .field label{
+    display:block;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  .row{
+    display:flex;
+    gap:8px;
+  }
+  .row .field{flex:1;}
+
+  input[type="text"], input[type="number"]{
+    width:100%;
+    padding:8px 9px;
+    border:1px solid var(--rule);
+    background:#fff;
+    border-radius:4px;
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--ink);
+  }
+  input[type="text"]:focus, input[type="number"]:focus{
+    outline:none;
+    border-color:var(--teal);
+  }
+  input[type="range"]{width:100%;accent-color:var(--teal);}
+
+  button{
+    font-family:var(--sans);
+    cursor:pointer;
+    border-radius:4px;
+    border:1px solid var(--rule);
+    background:#fff;
+    color:var(--ink);
+    padding:8px 12px;
+    font-size:12.5px;
+    font-weight:600;
+    transition:border-color .12s ease, background .12s ease;
+  }
+  button:hover{border-color:var(--teal);}
+  button.primary{
+    background:var(--teal);
+    border-color:var(--teal);
+    color:#fff;
+  }
+  button.primary:hover{background:#255c53;}
+  button.rust{
+    background:var(--rust);
+    border-color:var(--rust);
+    color:#fff;
+  }
+  button.rust:hover{background:#953a22;}
+  button.ghost{
+    background:transparent;
+    border-color:transparent;
+    color:var(--ink-soft);
+    padding:6px 8px;
+  }
+  button.ghost:hover{color:var(--rust);}
+  button.small{padding:5px 9px;font-size:11.5px;}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  button.active{border-color:var(--teal);background:var(--teal-dim);}
+
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+
+  .point-card{
+    border:1px solid var(--rule);
+    border-radius:6px;
+    padding:12px;
+    margin-bottom:10px;
+    background:#fff;
+  }
+  .point-card .pt-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .dot.a{background:var(--teal);}
+  .dot.b{background:var(--rust);}
+  .pt-head strong{font-size:13px;}
+
+  .readout{
+    background:var(--paper-dim);
+    border-radius:6px;
+    padding:14px 16px;
+    text-align:center;
+    margin-top:6px;
+  }
+  .readout .km{
+    font-family:var(--mono);
+    font-size:26px;
+    font-weight:700;
+    color:var(--teal);
+    line-height:1.1;
+  }
+  .readout .km-label{
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:4px;
+  }
+  .readout.empty .km{color:var(--ink-soft);font-size:14px;font-weight:500;}
+
+  .radio-list label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12.5px;
+    padding:6px 0;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .radio-list select{
+    font-family:var(--mono);
+    font-size:12px;
+    padding:4px 6px;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    background:#fff;
+  }
+
+  #savedList{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    max-height:280px;
+    overflow-y:auto;
+  }
+  .saved-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border:1px solid var(--rule);
+    border-radius:6px;
+    background:#fff;
+  }
+  .saved-item .meta{flex:1;min-width:0;}
+  .saved-item .name{font-size:13px;font-weight:600;}
+  .saved-item .coords{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  .saved-empty{
+    font-size:12px;
+    color:var(--ink-soft);
+    font-style:italic;
+    padding:6px 0;
+  }
+
+  .hint{
+    font-size:11px;
+    color:var(--ink-soft);
+    line-height:1.5;
+    margin-top:8px;
+  }
+
+  /* ---------- API key gate ---------- */
+  #gate{
+    position:absolute;
+    inset:0;
+    background:var(--paper);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+  }
+  #gate .box{
+    max-width:420px;
+    width:90%;
+    background:#fff;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    padding:28px;
+  }
+  #gate h2{margin:0 0 6px;font-size:18px;}
+  #gate p{font-size:13px;color:var(--ink-soft);line-height:1.6;margin:0 0 16px;}
+  #gate input{margin-bottom:10px;}
+  #gate .err{color:var(--rust);font-size:12px;margin-top:8px;display:none;}
+  #gate a{color:var(--teal);}
+
+  /* ---------- Map ---------- */
+  #mapWrap{
+    position:relative;
+    flex:1;
+    height:100vh;
+  }
+  #map{width:100%;height:100%;}
+
+  .mode-banner{
+    position:absolute;
+    top:16px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:#fff;
+    padding:8px 16px;
+    border-radius:20px;
+    font-size:12.5px;
+    display:none;
+    align-items:center;
+    gap:10px;
+    z-index:20;
+    box-shadow:0 4px 14px rgba(0,0,0,.2);
+  }
+  .mode-banner button{
+    background:rgba(255,255,255,.15);
+    border:none;
+    color:#fff;
+    padding:3px 9px;
+    font-size:11px;
+  }
+
+  .iw{font-family:var(--sans);font-size:13px;min-width:170px;}
+  .iw h4{margin:0 0 4px;font-size:13.5px;}
+  .iw .iwc{font-family:var(--mono);font-size:11px;color:#5B6675;margin-bottom:8px;}
+  .iw .iw-btns{display:flex;flex-wrap:wrap;gap:5px;}
+  .iw button{padding:4px 8px;font-size:11px;}
+
+  .map-tooltip{
+    position:absolute;
+    transform:translate(-50%, -148%);
+    background:var(--ink);
+    color:#fff;
+    padding:4px 9px;
+    border-radius:5px;
+    font-family:var(--mono);
+    font-size:11px;
+    white-space:nowrap;
+    pointer-events:none;
+    box-shadow:0 3px 8px rgba(0,0,0,.25);
+    z-index:5;
+  }
+  .map-tooltip:after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:100%;
+    transform:translateX(-50%);
+    border:5px solid transparent;
+    border-top-color:var(--ink);
+  }
+
+  .badge{
+    display:inline-block;
+    font-size:9.5px;
+    font-weight:700;
+    letter-spacing:.02em;
+    padding:2px 7px;
+    border-radius:10px;
+    margin-left:7px;
+    vertical-align:middle;
+  }
+  .badge.in{background:var(--teal-dim);color:var(--teal);}
+  .badge.out{background:var(--paper-dim);color:var(--ink-soft);}
+
+  .db-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
+  .db-status{
+    font-size:11px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:var(--ink-soft);
+  }
+  .db-dot{width:7px;height:7px;border-radius:50%;background:var(--ink-soft);flex-shrink:0;}
+  .db-dot.on{background:var(--teal);}
+  .db-dot.err{background:var(--rust);}
+
+  ::placeholder{color:#B7B0A0;}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h2>Connect Google Maps</h2>
+    <p>This tool loads the Google Maps JavaScript API in your browser. Paste a Maps JavaScript API key (with Geometry &amp; Places enabled) to continue — it's kept only in this browser tab.<br><br>
+    Get a key from the <a href="https://console.cloud.google.com/google/maps-apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>.</p>
+    <input type="text" id="apiKeyInput" placeholder="AIza..." value="AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg">
+    <button class="primary" id="loadMapBtn" style="width:100%">Load map</button>
+    <div class="err" id="gateErr">Couldn't load Google Maps with that key. Check it's valid and has the Maps JavaScript, Geometry, and Places APIs enabled.</div>
+  </div>
+</div>
+
+<div id="sidebar">
+  <div class="brand">
+    <h1>Field Plot</h1>
+    <p>Mark two points, measure the straight-line distance, and draw a radius circle around any location.</p>
+  </div>
+
+  <!-- POINTS -->
+  <div class="section">
+    <p class="section-label">Points &amp; distance</p>
+
+    <div class="point-card" id="cardA">
+      <div class="pt-head"><span class="dot a"></span><strong>Point A</strong></div>
+      <div class="row">
+        <div class="field"><label>Latitude</label><input type="text" id="latA" placeholder="e.g. 6.9271"></div>
+        <div class="field"><label>Longitude</label><input type="text" id="lngA" placeholder="e.g. 79.8612"></div>
+      </div>
+      <div class="btn-row">
+        <button class="small" id="currentA">Use current location</button>
+        <button class="small" id="pickA">Pick on map</button>
+        <button class="small" id="applyA">Set point</button>
+      </div>
+    </div>
+
+    <div class="point-card" id="cardB">
+      <div class="pt-head"><span class="dot b"></span><strong>Point B</strong></div>
+      <div class="row">
+        <div class="field"><label>Latitude</label><input type="text" id="latB" placeholder="e.g. 7.2906"></div>
+        <div class="field"><label>Longitude</label><input type="text" id="lngB" placeholder="e.g. 80.6337"></div>
+      </div>
+      <div class="btn-row">
+        <button class="small" id="currentB">Use current location</button>
+        <button class="small" id="pickB">Pick on map</button>
+        <button class="small" id="applyB">Set point</button>
+      </div>
+    </div>
+
+    <div class="readout empty" id="distReadout">
+      <div class="km" id="distKm">—</div>
+      <div class="km-label">straight-line distance, A → B</div>
+    </div>
+    <div class="btn-row">
+      <button class="small" id="clearPoints">Clear points</button>
+      <button class="small" id="downloadSnapshot">Download map snapshot</button>
+    </div>
+    <p class="hint" id="snapshotHint" style="display:none;"></p>
+  </div>
+
+  <!-- CIRCLE -->
+  <div class="section">
+    <p class="section-label">Radius circle</p>
+    <div class="radio-list" id="circleCenterChoice">
+      <label><input type="radio" name="centerMode" value="A" checked> Center on Point A</label>
+      <label><input type="radio" name="centerMode" value="B"> Center on Point B</label>
+      <label style="justify-content:space-between;">
+        <span style="display:flex;align-items:center;gap:8px;"><input type="radio" name="centerMode" value="saved"> Center on saved location</span>
+      </label>
+      <select id="savedCenterSelect" style="width:100%;margin:-2px 0 4px 26px;"><option value="">— choose a saved location —</option></select>
+      <label><input type="radio" name="centerMode" value="click"> Click map to set center</label>
+    </div>
+
+    <div class="field" style="margin-top:10px;">
+      <label>Radius (km)</label>
+      <input type="number" id="radiusKm" min="0.01" step="0.1" value="5">
+    </div>
+    <input type="range" id="radiusSlider" min="0.1" max="200" step="0.1" value="5">
+
+    <div class="btn-row">
+      <button class="primary small" id="drawCircleBtn">Draw circle</button>
+      <button class="small" id="circleABBtn">Circle A → B</button>
+      <button class="small" id="clearCircleBtn">Clear circle</button>
+    </div>
+    <p class="hint">Drag the circle's edge on the map to resize it — the radius field updates live. Drag its center to move it. "Circle A → B" centers on Point A with a radius equal to the A→B distance, so B sits right on the edge.</p>
+  </div>
+
+  <!-- SAVED LOCATIONS -->
+  <div class="section" style="border-bottom:none;">
+    <p class="section-label">Saved locations</p>
+
+    <div class="field">
+      <label>MySQL API endpoint (optional — leave blank to use browser storage)</label>
+      <input type="text" id="dbUrl" placeholder="https://yourserver.com/api/locations.php" value="http://127.0.0.1:8081/map/locations.php">
+    </div>
+    <div class="db-row">
+      <button class="small" id="dbConnect">Connect</button>
+      <button class="small" id="dbDisconnect" style="display:none;">Use browser storage</button>
+      <span class="db-status" id="dbStatus"><span class="db-dot" id="dbDot"></span><span id="dbStatusText">Storing locations in this browser</span></span>
+    </div>
+    <p class="hint">Point this at the bundled <code>api/locations.php</code> (see the PHP + MySQL files below) once it's deployed on a server, to share locations across devices instead of keeping them only in this browser.</p>
+
+    <div class="row" style="margin-top:14px;">
+      <div class="field"><label>Name</label><input type="text" id="newName" placeholder="e.g. Warehouse"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Latitude</label><input type="text" id="newLat" placeholder="6.9271"></div>
+      <div class="field"><label>Longitude</label><input type="text" id="newLng" placeholder="79.8612"></div>
+    </div>
+    <div class="btn-row">
+      <button class="small" id="fillFromA">Fill from Point A</button>
+      <button class="small" id="fillFromB">Fill from Point B</button>
+      <button class="small" id="pickForSave">Pick on map</button>
+      <button class="primary small" id="addSaved">Add location</button>
+    </div>
+
+    <div id="savedList" style="margin-top:14px;"></div>
+    <p class="saved-empty" id="savedEmptyMsg">No saved locations yet.</p>
+  </div>
+</div>
+
+<div id="mapWrap">
+  <div class="mode-banner" id="modeBanner">
+    <span id="modeBannerText">Click the map to set a location</span>
+    <button id="cancelMode">Cancel</button>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- State ---------------- */
+  var map, geocoder;
+  var points = { A: { lat:null, lng:null, marker:null }, B: { lat:null, lng:null, marker:null } };
+  var line = null;
+  var circle = null;
+  var saved = [];
+  var savedMarkers = {};
+  var savedTooltips = {};
+  var activeInfoWindow = null;
+  var pickMode = null; // 'A' | 'B' | 'save' | 'circle'
+  var nextId = 1;
+  var mapsApiKey = null;
+
+  var STORAGE_KEY = "fieldplot_saved_locations_v1";
+
+  /* ---------------- Utilities ---------------- */
+  function fmtKm(km){
+    if (km < 1) return (km*1000).toFixed(0) + " m";
+    return km.toFixed(km < 100 ? 2 : 1) + " km";
+  }
+  function haversineKm(lat1, lng1, lat2, lng2){
+    var R = 6371.0088;
+    var toRad = function(d){ return d * Math.PI / 180; };
+    var dLat = toRad(lat2 - lat1);
+    var dLng = toRad(lng2 - lng1);
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(toRad(lat1))*Math.cos(toRad(lat2)) *
+            Math.sin(dLng/2)*Math.sin(dLng/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+  function distanceKm(p1, p2){
+    if (window.google && google.maps.geometry){
+      var m = google.maps.geometry.spherical.computeDistanceBetween(
+        new google.maps.LatLng(p1.lat, p1.lng),
+        new google.maps.LatLng(p2.lat, p2.lng)
+      );
+      return m / 1000;
+    }
+    return haversineKm(p1.lat, p1.lng, p2.lat, p2.lng);
+  }
+  function isNum(v){ return v !== null && v !== "" && !isNaN(parseFloat(v)); }
+  function uid(){ return "loc_" + (nextId++) + "_" + Date.now().toString(36); }
+
+  /* ---------------- Storage adapter: browser (local) vs MySQL API ---------------- */
+  var storageMode = "local"; // 'local' | 'api'
+  var apiUrl = null;
+
+  function apiFetch(url, opts){
+    return fetch(url, opts).then(function(res){
+      if (!res.ok){
+        return res.text().then(function(t){ throw new Error("HTTP " + res.status + (t ? (": " + t) : "")); });
+      }
+      return res.status === 204 ? null : res.json();
+    });
+  }
+
+  var Adapter = {
+    local: {
+      add: function(loc){ return Promise.resolve({ id: uid(), name: loc.name, lat: loc.lat, lng: loc.lng }); },
+      update: function(loc){ return Promise.resolve(loc); },
+      remove: function(id){ return Promise.resolve(); }
+    },
+    api: {
+      list: function(url){
+        return apiFetch(url).then(function(rows){
+          return (rows || []).map(function(r){
+            return { id: String(r.id), name: r.name, lat: parseFloat(r.lat), lng: parseFloat(r.lng) };
+          });
+        });
+      },
+      add: function(loc){
+        return apiFetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: loc.name, lat: loc.lat, lng: loc.lng })
+        }).then(function(r){ return { id: String(r.id), name: r.name, lat: parseFloat(r.lat), lng: parseFloat(r.lng) }; });
+      },
+      update: function(loc){
+        return apiFetch(apiUrl + "?id=" + encodeURIComponent(loc.id), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: loc.name, lat: loc.lat, lng: loc.lng })
+        });
+      },
+      remove: function(id){
+        return apiFetch(apiUrl + "?id=" + encodeURIComponent(id), { method: "DELETE" });
+      }
+    }
+  };
+  function currentAdapter(){ return storageMode === "api" ? Adapter.api : Adapter.local; }
+
+  function setDbStatus(text, state){
+    document.getElementById("dbStatusText").textContent = text;
+    var dot = document.getElementById("dbDot");
+    dot.classList.remove("on", "err");
+    if (state === "on") dot.classList.add("on");
+    if (state === "err") dot.classList.add("err");
+  }
+
+  function reloadMarkersFromSaved(){
+    Object.keys(savedMarkers).forEach(function(id){ savedMarkers[id].setMap(null); });
+    Object.keys(savedTooltips).forEach(function(id){ savedTooltips[id].setMap(null); });
+    savedMarkers = {};
+    savedTooltips = {};
+    saved.forEach(placeSavedMarker);
+    renderSavedList();
+    refreshCircleMembership();
+  }
+
+  function connectDatabase(){
+    var url = document.getElementById("dbUrl").value.trim();
+    if (!url){ alert("Enter the URL of your locations.php API first."); return; }
+    var btn = document.getElementById("dbConnect");
+    btn.textContent = "Connecting…"; btn.disabled = true;
+    Adapter.api.list(url).then(function(rows){
+      apiUrl = url;
+      storageMode = "api";
+      saved = rows;
+      reloadMarkersFromSaved();
+      setDbStatus("Connected — " + saved.length + " location" + (saved.length === 1 ? "" : "s") + " from MySQL", "on");
+      document.getElementById("dbConnect").style.display = "none";
+      document.getElementById("dbDisconnect").style.display = "inline-block";
+    }).catch(function(err){
+      setDbStatus("Couldn't connect: " + err.message, "err");
+    }).finally(function(){
+      btn.textContent = "Connect"; btn.disabled = false;
+    });
+  }
+
+  function disconnectDatabase(){
+    storageMode = "local";
+    apiUrl = null;
+    loadPersisted();
+    reloadMarkersFromSaved();
+    setDbStatus("Storing locations in this browser", null);
+    document.getElementById("dbConnect").style.display = "inline-block";
+    document.getElementById("dbDisconnect").style.display = "none";
+  }
+
+  function persist(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); }catch(e){}
+  }
+  function loadPersisted(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw){
+        saved = JSON.parse(raw) || [];
+        saved.forEach(function(s){
+          var n = parseInt((s.id||"").split("_")[1], 10);
+          if (!isNaN(n) && n >= nextId) nextId = n + 1;
+        });
+      }
+    }catch(e){ saved = []; }
+  }
+
+  function setModeBanner(text){
+    var el = document.getElementById("modeBanner");
+    var txt = document.getElementById("modeBannerText");
+    if (text){ txt.textContent = text; el.style.display = "flex"; }
+    else { el.style.display = "none"; }
+  }
+  function clearPickMode(){
+    pickMode = null;
+    setModeBanner(null);
+    ["pickA","pickB","pickForSave"].forEach(function(id){
+      document.getElementById(id).classList.remove("active");
+    });
+  }
+  document.getElementById("cancelMode").addEventListener("click", clearPickMode);
+
+  /* ---------------- Points ---------------- */
+  function pointMarkerIcon(color){
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 9,
+      fillColor: color,
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 2
+    };
+  }
+
+  /* ---------------- Always-on map tooltips ---------------- */
+  var TooltipOverlay; // defined once the Google Maps API has loaded, see setupOverlayClass()
+
+  function setupOverlayClass(){
+    TooltipOverlay = function(marker, textFn){
+      this.marker = marker;
+      this.textFn = textFn;
+      this.div = null;
+      this.setMap(marker.getMap());
+    };
+    TooltipOverlay.prototype = new google.maps.OverlayView();
+    TooltipOverlay.prototype.onAdd = function(){
+      var div = document.createElement("div");
+      div.className = "map-tooltip";
+      this.div = div;
+      this.getPanes().floatPane.appendChild(div);
+    };
+    TooltipOverlay.prototype.draw = function(){
+      var proj = this.getProjection();
+      if (!proj || !this.div || !this.marker.getPosition()) return;
+      var pos = proj.fromLatLngToDivPixel(this.marker.getPosition());
+      this.div.style.left = pos.x + "px";
+      this.div.style.top = pos.y + "px";
+      this.div.textContent = this.textFn();
+    };
+    TooltipOverlay.prototype.onRemove = function(){
+      if (this.div && this.div.parentNode) this.div.parentNode.removeChild(this.div);
+      this.div = null;
+    };
+    TooltipOverlay.prototype.refresh = function(){ this.draw(); };
+  }
+
+  function attachLabel(marker, textFn){
+    var overlay = new TooltipOverlay(marker, textFn);
+    marker.addListener("position_changed", function(){ overlay.draw(); });
+    return overlay;
+  }
+
+  var pointTooltips = { A: null, B: null };
+
+  function refreshPointTooltips(){
+    if (pointTooltips.A) pointTooltips.A.refresh();
+    if (pointTooltips.B) pointTooltips.B.refresh();
+  }
+
+  function setPoint(which, lat, lng){
+    lat = parseFloat(lat); lng = parseFloat(lng);
+    if (isNaN(lat) || isNaN(lng)) return;
+    points[which].lat = lat;
+    points[which].lng = lng;
+    document.getElementById("lat" + which).value = lat.toFixed(6);
+    document.getElementById("lng" + which).value = lng.toFixed(6);
+
+    var color = which === "A" ? "#2C6E63" : "#B5482A";
+    if (!points[which].marker){
+      points[which].marker = new google.maps.Marker({
+        position: {lat:lat, lng:lng},
+        map: map,
+        draggable: true,
+        icon: pointMarkerIcon(color),
+        label: { text: which, color: "#fff", fontSize:"10px", fontWeight:"700" },
+        zIndex: 50
+      });
+      points[which].marker.addListener("dragend", function(e){
+        setPoint(which, e.latLng.lat(), e.latLng.lng());
+      });
+      pointTooltips[which] = attachLabel(points[which].marker, function(){
+        var p = points[which];
+        var txt = "Point " + which + " · " + p.lat.toFixed(5) + ", " + p.lng.toFixed(5);
+        var other = which === "A" ? points.B : points.A;
+        if (other.lat !== null) txt += " · " + fmtKm(distanceKm(points.A, points.B));
+        return txt;
+      });
+    } else {
+      points[which].marker.setPosition({lat:lat, lng:lng});
+    }
+    updateLine();
+    refreshPointTooltips();
+    if (getCircleCenterMode() === which) maybeAutoRedrawCircle();
+  }
+
+  function updateLine(){
+    var a = points.A, b = points.B;
+    var readout = document.getElementById("distReadout");
+    var kmEl = document.getElementById("distKm");
+    if (a.lat === null || b.lat === null){
+      if (line){ line.setMap(null); line = null; }
+      readout.classList.add("empty");
+      kmEl.textContent = "—";
+      return;
+    }
+    var path = [{lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng}];
+    if (!line){
+      line = new google.maps.Polyline({
+        path: path,
+        map: map,
+        strokeColor: "#1B2A41",
+        strokeOpacity: 0.85,
+        strokeWeight: 2.5,
+        geodesic: true
+      });
+    } else {
+      line.setPath(path);
+    }
+    var km = distanceKm(a, b);
+    readout.classList.remove("empty");
+    kmEl.textContent = fmtKm(km);
+
+    var bounds = new google.maps.LatLngBounds();
+    bounds.extend(path[0]); bounds.extend(path[1]);
+    map.fitBounds(bounds, 80);
+  }
+
+  function clearPoints(){
+    ["A","B"].forEach(function(w){
+      if (points[w].marker) points[w].marker.setMap(null);
+      if (pointTooltips[w]){ pointTooltips[w].setMap(null); pointTooltips[w] = null; }
+      points[w] = { lat:null, lng:null, marker:null };
+      document.getElementById("lat"+w).value = "";
+      document.getElementById("lng"+w).value = "";
+    });
+    updateLine();
+  }
+
+  function useCurrentLocation(which){
+    if (!navigator.geolocation){
+      alert("Geolocation isn't available in this browser.");
+      return;
+    }
+    var btn = document.getElementById(which === "A" ? "currentA" : "currentB");
+    var orig = btn.textContent;
+    btn.textContent = "Locating…";
+    btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(function(pos){
+      setPoint(which, pos.coords.latitude, pos.coords.longitude);
+      map.panTo({lat: pos.coords.latitude, lng: pos.coords.longitude});
+      btn.textContent = orig; btn.disabled = false;
+    }, function(err){
+      alert("Couldn't get your location: " + err.message);
+      btn.textContent = orig; btn.disabled = false;
+    }, { enableHighAccuracy:true, timeout:10000 });
+  }
+
+  /* ---------------- Circle ---------------- */
+  function getCircleCenterMode(){
+    var checked = document.querySelector('input[name="centerMode"]:checked');
+    return checked ? checked.value : "A";
+  }
+  function getCircleCenterLatLng(){
+    var mode = getCircleCenterMode();
+    if (mode === "A" || mode === "B"){
+      var p = points[mode];
+      if (p.lat === null) return null;
+      return { lat:p.lat, lng:p.lng };
+    }
+    if (mode === "saved"){
+      var sel = document.getElementById("savedCenterSelect").value;
+      var loc = saved.find(function(s){ return s.id === sel; });
+      return loc ? { lat: loc.lat, lng: loc.lng } : null;
+    }
+    return null; // 'click' mode requires explicit map click
+  }
+
+  function drawCircleAt(center, radiusKmVal){
+    if (!circle){
+      circle = new google.maps.Circle({
+        map: map,
+        center: center,
+        radius: radiusKmVal * 1000,
+        strokeColor: "#A9791F",
+        strokeOpacity: 0.9,
+        strokeWeight: 2,
+        fillColor: "#A9791F",
+        fillOpacity: 0.12,
+        editable: true,
+        draggable: true
+      });
+      circle.addListener("radius_changed", function(){
+        var km = circle.getRadius() / 1000;
+        document.getElementById("radiusKm").value = round1(km);
+        document.getElementById("radiusSlider").value = Math.min(200, km);
+        refreshCircleMembership();
+      });
+      circle.addListener("center_changed", function(){
+        refreshCircleMembership();
+      });
+    } else {
+      circle.setCenter(center);
+      circle.setRadius(radiusKmVal * 1000);
+    }
+    map.fitBounds(circle.getBounds(), 60);
+    refreshCircleMembership();
+  }
+  function round1(n){ return Math.round(n*10)/10; }
+
+  function circleContainsLatLng(lat, lng){
+    if (!circle) return null;
+    var c = circle.getCenter();
+    var km = distanceKm({lat:c.lat(), lng:c.lng()}, {lat:lat, lng:lng});
+    return km <= circle.getRadius() / 1000;
+  }
+
+  function savedMarkerIcon(inside){
+    var color = inside === true ? "#2C6E63" : "#A9791F";
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: inside === true ? 8 : 7,
+      fillColor: color,
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 2
+    };
+  }
+
+  function refreshCircleMembership(){
+    saved.forEach(function(loc){
+      var inside = circleContainsLatLng(loc.lat, loc.lng);
+      var marker = savedMarkers[loc.id];
+      if (marker) marker.setIcon(savedMarkerIcon(inside));
+      if (savedTooltips[loc.id]) savedTooltips[loc.id].refresh();
+    });
+    renderSavedList();
+  }
+
+  function drawCircleFromForm(){
+    var mode = getCircleCenterMode();
+    if (mode === "click"){
+      pickMode = "circle";
+      setModeBanner("Click the map to place the circle's center");
+      return;
+    }
+    var center = getCircleCenterLatLng();
+    var radiusInput = parseFloat(document.getElementById("radiusKm").value);
+    if (!center){
+      alert("That center isn't set yet — set the point or pick a saved location first.");
+      return;
+    }
+    if (isNaN(radiusInput) || radiusInput <= 0){
+      alert("Enter a radius greater than 0.");
+      return;
+    }
+    drawCircleAt(center, radiusInput);
+  }
+  function drawCircleAtoB(){
+    if (points.A.lat === null || points.B.lat === null){
+      alert("Set both Point A and Point B first.");
+      return;
+    }
+    var km = distanceKm(points.A, points.B);
+    document.querySelector('input[name="centerMode"][value="A"]').checked = true;
+    document.getElementById("radiusKm").value = round1(km) || km.toFixed(2);
+    document.getElementById("radiusSlider").value = Math.min(200, km);
+    drawCircleAt({ lat: points.A.lat, lng: points.A.lng }, km);
+  }
+
+  function maybeAutoRedrawCircle(){
+    if (!circle) return;
+    var center = getCircleCenterLatLng();
+    if (center) circle.setCenter(center);
+  }
+  function clearCircle(){
+    if (circle){ circle.setMap(null); circle = null; }
+    refreshCircleMembership();
+  }
+
+  /* ---------------- Saved locations ---------------- */
+  function addSavedLocation(name, lat, lng){
+    lat = parseFloat(lat); lng = parseFloat(lng);
+    if (!name || isNaN(lat) || isNaN(lng)) return;
+    currentAdapter().add({ name:name, lat:lat, lng:lng }).then(function(rec){
+      saved.push(rec);
+      if (storageMode === "local") persist();
+      renderSavedList();
+      placeSavedMarker(rec);
+      refreshCircleMembership();
+    }).catch(function(err){
+      alert("Couldn't save that location: " + err.message);
+    });
+  }
+  function deleteSavedLocation(id){
+    currentAdapter().remove(id).then(function(){
+      saved = saved.filter(function(s){ return s.id !== id; });
+      if (storageMode === "local") persist();
+      if (savedMarkers[id]){ savedMarkers[id].setMap(null); delete savedMarkers[id]; }
+      if (savedTooltips[id]){ savedTooltips[id].setMap(null); delete savedTooltips[id]; }
+      renderSavedList();
+    }).catch(function(err){
+      alert("Couldn't delete that location: " + err.message);
+    });
+  }
+  function updateSavedLocation(id, name, lat, lng){
+    var loc = saved.find(function(s){ return s.id === id; });
+    if (!loc) return;
+    var prev = { name: loc.name, lat: loc.lat, lng: loc.lng };
+    loc.name = name; loc.lat = parseFloat(lat); loc.lng = parseFloat(lng);
+    currentAdapter().update(loc).then(function(){
+      if (storageMode === "local") persist();
+      renderSavedList();
+      if (savedMarkers[id]){
+        savedMarkers[id].setPosition({lat:loc.lat, lng:loc.lng});
+        savedMarkers[id].setTitle(loc.name);
+        savedMarkers[id].setIcon(savedMarkerIcon(circleContainsLatLng(loc.lat, loc.lng)));
+      }
+      if (savedTooltips[id]) savedTooltips[id].refresh();
+      refreshCircleMembership();
+    }).catch(function(err){
+      loc.name = prev.name; loc.lat = prev.lat; loc.lng = prev.lng;
+      alert("Couldn't update that location: " + err.message);
+    });
+  }
+
+  function placeSavedMarker(loc){
+    var marker = new google.maps.Marker({
+      position: {lat: loc.lat, lng: loc.lng},
+      map: map,
+      title: loc.name,
+      icon: savedMarkerIcon(circleContainsLatLng(loc.lat, loc.lng))
+    });
+    marker.addListener("click", function(){
+      openSavedPopup(loc.id, marker);
+    });
+    savedMarkers[loc.id] = marker;
+    savedTooltips[loc.id] = attachLabel(marker, function(){
+      var inside = circleContainsLatLng(loc.lat, loc.lng);
+      var suffix = inside === true ? " · inside" : (inside === false ? " · outside" : "");
+      return loc.name + suffix;
+    });
+  }
+
+  function openSavedPopup(id, marker){
+    var loc = saved.find(function(s){ return s.id === id; });
+    if (!loc) return;
+    if (activeInfoWindow) activeInfoWindow.close();
+    var content = document.createElement("div");
+    content.className = "iw";
+    content.innerHTML =
+      '<h4>' + escapeHtml(loc.name) + '</h4>' +
+      '<div class="iwc">' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + '</div>' +
+      '<div class="iw-btns">' +
+        '<button data-act="setA">Set as A</button>' +
+        '<button data-act="setB">Set as B</button>' +
+        '<button data-act="circle">Draw circle here</button>' +
+        '<button data-act="edit">Edit</button>' +
+        '<button data-act="delete">Delete</button>' +
+      '</div>';
+    content.querySelector('[data-act="setA"]').onclick = function(){ setPoint("A", loc.lat, loc.lng); activeInfoWindow.close(); };
+    content.querySelector('[data-act="setB"]').onclick = function(){ setPoint("B", loc.lat, loc.lng); activeInfoWindow.close(); };
+    content.querySelector('[data-act="circle"]').onclick = function(){
+      document.querySelector('input[name="centerMode"][value="saved"]').checked = true;
+      document.getElementById("savedCenterSelect").value = loc.id;
+      var r = parseFloat(document.getElementById("radiusKm").value) || 5;
+      drawCircleAt({lat:loc.lat, lng:loc.lng}, r);
+      activeInfoWindow.close();
+    };
+    content.querySelector('[data-act="edit"]').onclick = function(){
+      document.getElementById("newName").value = loc.name;
+      document.getElementById("newLat").value = loc.lat;
+      document.getElementById("newLng").value = loc.lng;
+      document.getElementById("addSaved").textContent = "Save changes";
+      document.getElementById("addSaved").dataset.editingId = loc.id;
+      activeInfoWindow.close();
+    };
+    content.querySelector('[data-act="delete"]').onclick = function(){
+      if (confirm('Delete "' + loc.name + '"?')) deleteSavedLocation(loc.id);
+      activeInfoWindow.close();
+    };
+    activeInfoWindow = new google.maps.InfoWindow({ content: content });
+    activeInfoWindow.open(map, marker);
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function renderSavedList(){
+    var list = document.getElementById("savedList");
+    var emptyMsg = document.getElementById("savedEmptyMsg");
+    var select = document.getElementById("savedCenterSelect");
+    list.innerHTML = "";
+    select.innerHTML = '<option value="">— choose a saved location —</option>';
+
+    emptyMsg.style.display = saved.length ? "none" : "block";
+
+    saved.forEach(function(loc){
+      var item = document.createElement("div");
+      item.className = "saved-item";
+      var badge = "";
+      if (circle){
+        var inside = circleContainsLatLng(loc.lat, loc.lng);
+        badge = '<span class="badge ' + (inside ? "in" : "out") + '">' + (inside ? "Inside circle" : "Outside") + '</span>';
+      }
+      item.innerHTML =
+        '<div class="meta"><div class="name">' + escapeHtml(loc.name) + badge + '</div>' +
+        '<div class="coords">' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + '</div></div>';
+      var openBtn = document.createElement("button");
+      openBtn.className = "ghost small"; openBtn.textContent = "Locate";
+      openBtn.onclick = function(){
+        map.panTo({lat:loc.lat, lng:loc.lng});
+        map.setZoom(Math.max(map.getZoom(), 12));
+        openSavedPopup(loc.id, savedMarkers[loc.id]);
+      };
+      var delBtn = document.createElement("button");
+      delBtn.className = "ghost small"; delBtn.textContent = "✕";
+      delBtn.title = "Delete";
+      delBtn.onclick = function(){
+        if (confirm('Delete "' + loc.name + '"?')) deleteSavedLocation(loc.id);
+      };
+      item.appendChild(openBtn);
+      item.appendChild(delBtn);
+      list.appendChild(item);
+
+      var opt = document.createElement("option");
+      opt.value = loc.id; opt.textContent = loc.name;
+      select.appendChild(opt);
+    });
+  }
+
+  /* ---------------- Snapshot download ---------------- */
+  function showSnapshotHint(msg, isError){
+    var el = document.getElementById("snapshotHint");
+    el.textContent = msg;
+    el.style.color = isError ? "#B5482A" : "";
+    el.style.display = msg ? "block" : "none";
+  }
+
+  function circleToPathParam(c){
+    var center = c.getCenter();
+    var radiusM = c.getRadius();
+    var pts = [];
+    for (var deg = 0; deg <= 360; deg += 10){
+      var p = google.maps.geometry.spherical.computeOffset(center, radiusM, deg);
+      pts.push(p.lat().toFixed(6) + "," + p.lng().toFixed(6));
+    }
+    return "color:0xA9791Fcc|weight:2|fillcolor:0xA9791F22|" + pts.join("|");
+  }
+
+  function buildStaticMapUrl(){
+    var size = "1640x1420";
+    var params = [
+      "size=" + size,
+      "scale=8",
+      "maptype=roadmap",
+      "key=" + encodeURIComponent(mapsApiKey)
+    ];
+    var hasA = points.A.lat !== null, hasB = points.B.lat !== null;
+
+    if (hasA || hasB){
+      if (hasA) params.push("markers=" + encodeURIComponent("color:0x2C6E63|label:A|" + points.A.lat + "," + points.A.lng));
+      if (hasB) params.push("markers=" + encodeURIComponent("color:0xB5482A|label:B|" + points.B.lat + "," + points.B.lng));
+      if (hasA && hasB) params.push("path=" + encodeURIComponent("color:0x1B2A41dd|weight:3|" + points.A.lat + "," + points.A.lng + "|" + points.B.lat + "," + points.B.lng));
+    }
+    if (circle){
+      params.push("path=" + encodeURIComponent(circleToPathParam(circle)));
+    }
+    if (!hasA && !hasB && !circle){
+      var c = map.getCenter();
+      params.push("center=" + c.lat() + "," + c.lng());
+      params.push("zoom=" + map.getZoom());
+    } else {
+      // let markers/paths auto-fit; Static Maps computes bounds from them automatically.
+    }
+    return "https://maps.googleapis.com/maps/api/staticmap?" + params.join("&");
+  }
+
+  function downloadSnapshot(){
+    if (!mapsApiKey){ showSnapshotHint("No API key on hand — reload the map first.", true); return; }
+    showSnapshotHint("Building snapshot…", false);
+
+    var url = buildStaticMapUrl();
+    var img = new Image();
+    img.crossOrigin = "anonymous";
+
+    img.onload = function(){
+      try{
+        var canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+
+        var hasA = points.A.lat !== null, hasB = points.B.lat !== null;
+        if (hasA || hasB){
+          var barH = 44;
+          ctx.fillStyle = "rgba(27,42,65,0.88)";
+          ctx.fillRect(0, canvas.height - barH, canvas.width, barH);
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "600 20px sans-serif";
+          ctx.textBaseline = "middle";
+          var label;
+          if (hasA && hasB){
+            label = "A → B distance: " + fmtKm(distanceKm(points.A, points.B));
+          } else {
+            var p = hasA ? points.A : points.B;
+            label = (hasA ? "Point A: " : "Point B: ") + p.lat.toFixed(5) + ", " + p.lng.toFixed(5);
+          }
+          ctx.fillText(label, 16, canvas.height - barH / 2);
+        }
+
+        var dataUrl = canvas.toDataURL("image/png");
+        var a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = "field-plot-snapshot.png";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showSnapshotHint("Snapshot downloaded.", false);
+        setTimeout(function(){ showSnapshotHint("", false); }, 3500);
+      } catch(err){
+        // Canvas got tainted (Static Maps didn't send CORS headers for this key/referrer setup) —
+        // fall back to opening the image directly so the user can save it by hand.
+        window.open(url, "_blank");
+        showSnapshotHint("Couldn't composite automatically — opened the map image in a new tab, right-click it to save.", true);
+      }
+    };
+    img.onerror = function(){
+      window.open(url, "_blank");
+      showSnapshotHint("Couldn't load the Static Maps image directly — opened it in a new tab instead. Make sure the Maps Static API is enabled for your key.", true);
+    };
+    img.src = url;
+  }
+
+  /* ---------------- Map init ---------------- */
+  window.initFieldPlotMap = function(){
+    setupOverlayClass();
+    map = new google.maps.Map(document.getElementById("map"), {
+      center: { lat: 7.8731, lng: 80.7718 }, // Sri Lanka, sensible default
+      zoom: 8,
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: true
+    });
+    geocoder = new google.maps.Geocoder();
+
+    map.addListener("click", function(e){
+      if (!pickMode) return;
+      var lat = e.latLng.lat(), lng = e.latLng.lng();
+      if (pickMode === "A") setPoint("A", lat, lng);
+      else if (pickMode === "B") setPoint("B", lat, lng);
+      else if (pickMode === "save"){
+        document.getElementById("newLat").value = lat.toFixed(6);
+        document.getElementById("newLng").value = lng.toFixed(6);
+      } else if (pickMode === "circle"){
+        var r = parseFloat(document.getElementById("radiusKm").value) || 5;
+        drawCircleAt({lat:lat, lng:lng}, r);
+      }
+      clearPickMode();
+    });
+
+    loadPersisted();
+    renderSavedList();
+    saved.forEach(placeSavedMarker);
+
+    document.getElementById("gate").style.display = "none";
+    wireUI();
+  };
+
+  /* ---------------- Wire up UI ---------------- */
+  function wireUI(){
+    document.getElementById("applyA").addEventListener("click", function(){
+      setPoint("A", document.getElementById("latA").value, document.getElementById("lngA").value);
+    });
+    document.getElementById("applyB").addEventListener("click", function(){
+      setPoint("B", document.getElementById("latB").value, document.getElementById("lngB").value);
+    });
+    document.getElementById("currentA").addEventListener("click", function(){ useCurrentLocation("A"); });
+    document.getElementById("currentB").addEventListener("click", function(){ useCurrentLocation("B"); });
+
+    document.getElementById("pickA").addEventListener("click", function(){
+      pickMode = "A"; setModeBanner("Click the map to set Point A"); this.classList.add("active");
+    });
+    document.getElementById("pickB").addEventListener("click", function(){
+      pickMode = "B"; setModeBanner("Click the map to set Point B"); this.classList.add("active");
+    });
+    document.getElementById("pickForSave").addEventListener("click", function(){
+      pickMode = "save"; setModeBanner("Click the map to set the new location's coordinates"); this.classList.add("active");
+    });
+
+    document.getElementById("clearPoints").addEventListener("click", clearPoints);
+
+    document.getElementById("radiusKm").addEventListener("input", function(){
+      var v = parseFloat(this.value);
+      if (!isNaN(v)){
+        document.getElementById("radiusSlider").value = Math.min(200, v);
+        if (circle) circle.setRadius(v * 1000);
+      }
+    });
+    document.getElementById("radiusSlider").addEventListener("input", function(){
+      document.getElementById("radiusKm").value = this.value;
+      if (circle) circle.setRadius(parseFloat(this.value) * 1000);
+    });
+    document.getElementById("drawCircleBtn").addEventListener("click", drawCircleFromForm);
+    document.getElementById("circleABBtn").addEventListener("click", drawCircleAtoB);
+    document.getElementById("clearCircleBtn").addEventListener("click", clearCircle);
+    document.getElementById("downloadSnapshot").addEventListener("click", downloadSnapshot);
+    document.querySelectorAll('input[name="centerMode"]').forEach(function(r){
+      r.addEventListener("change", function(){
+        if (this.value !== "click") clearPickMode();
+        maybeAutoRedrawCircle();
+      });
+    });
+    document.getElementById("savedCenterSelect").addEventListener("change", maybeAutoRedrawCircle);
+
+    document.getElementById("fillFromA").addEventListener("click", function(){
+      if (points.A.lat === null) return alert("Point A isn't set yet.");
+      document.getElementById("newLat").value = points.A.lat;
+      document.getElementById("newLng").value = points.A.lng;
+    });
+    document.getElementById("fillFromB").addEventListener("click", function(){
+      if (points.B.lat === null) return alert("Point B isn't set yet.");
+      document.getElementById("newLat").value = points.B.lat;
+      document.getElementById("newLng").value = points.B.lng;
+    });
+
+    document.getElementById("dbConnect").addEventListener("click", connectDatabase);
+    document.getElementById("dbDisconnect").addEventListener("click", disconnectDatabase);
+    document.getElementById("dbUrl").addEventListener("keydown", function(e){
+      if (e.key === "Enter") connectDatabase();
+    });
+
+    document.getElementById("addSaved").addEventListener("click", function(){
+      var name = document.getElementById("newName").value.trim();
+      var lat = document.getElementById("newLat").value;
+      var lng = document.getElementById("newLng").value;
+      if (!name){ alert("Give the location a name."); return; }
+      if (!isNum(lat) || !isNum(lng)){ alert("Enter valid latitude and longitude."); return; }
+
+      var editingId = this.dataset.editingId;
+      if (editingId){
+        updateSavedLocation(editingId, name, lat, lng);
+        delete this.dataset.editingId;
+        this.textContent = "Add location";
+      } else {
+        addSavedLocation(name, lat, lng);
+      }
+      document.getElementById("newName").value = "";
+      document.getElementById("newLat").value = "";
+      document.getElementById("newLng").value = "";
+    });
+  }
+
+  /* ---------------- API key gate ---------------- */
+  document.getElementById("loadMapBtn").addEventListener("click", function(){
+    var key = document.getElementById("apiKeyInput").value.trim();
+    if (!key){ alert("Paste a Google Maps API key first."); return; }
+    mapsApiKey = key;
+    var btn = this;
+    btn.textContent = "Loading…"; btn.disabled = true;
+    document.getElementById("gateErr").style.display = "none";
+
+    window.gm_authFailure = function(){
+      document.getElementById("gateErr").style.display = "block";
+      btn.textContent = "Load map"; btn.disabled = false;
+    };
+
+    var script = document.createElement("script");
+    script.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) +
+                 "&libraries=geometry,places&callback=initFieldPlotMap";
+    script.async = true;
+    script.onerror = function(){
+      document.getElementById("gateErr").style.display = "block";
+      btn.textContent = "Load map"; btn.disabled = false;
+    };
+    document.head.appendChild(script);
+  });
+
+  document.getElementById("apiKeyInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("loadMapBtn").click();
+  });
+
+})();
+</script>
+</body>
+</html>
